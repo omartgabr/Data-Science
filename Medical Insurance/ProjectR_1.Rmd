@@ -1,0 +1,550 @@
+---
+title: "Project 1 (Part 2)"
+author: "Omar Gabr"
+date: "October 13, 2022"
+output:
+  pdf_document:
+    keep_tex: yes
+---
+
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+Section 1:
+
+Dataset: Medical Insurance Cost
+
+Shape: (3630 entries, 7 features)
+
+Source: https://www.kaggle.com/datasets/gauravduttakiit/medical-insurance-cost?select=Train_Data.csv
+
+Interest: With the current state of the U.S. health economy, I would like to analyze which features highly infuence the cost of medical insurance. As many citizens are hit with enormous debts, it is important to determine the factors of pricing and perhaps seeking more regulation with insurance companies.
+            
+Objective: Based on the fact that a high BMI could indicate obesity, and therefore high cholesterol issues, I expect that medical insurance costs more for individuals with a relatively high BMI. I also expect that the older the individual is the higher the insurance costs due to a weakening immune system and demand for medical attention.
+
+The dataset I extracted contains 7 features with 4 being numeric and 3 being string, and 3,630 entries.
+```{r}
+# importing libraries
+library(readxl)
+
+data <- read_excel('Train_Data.xlsx')
+head(data)
+```
+
+We will examine the following 3 features: (1) age (2) bmi (3) charges ***and maybe (4) smoker***
+```{r}
+# create new dataframe with target variables
+df <- data[,c('age','bmi', 'charges')]
+colnames(df) <- c('age', 'bmi', 'cost')
+
+# assign columns to variables
+# convert age column from float to int for proper analysis
+age <- as.integer(df$age)
+bmi <- df$bmi
+cost <- as.integer(df$cost)
+
+# change df into int for age and cost
+df$age <- age
+df$cost <- cost
+
+head(df)
+```
+
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+Section 2:
+
+The histogram displaying the 'Age' distribution below does not seem to resemble the normal distribution. In fact, it does not seem to resemble any known distribution, except that most data are approximately uniform with the exception of the years between 50 and 70.
+
+```{r}
+# Histogram Distribution
+# age distribution with min=18, max=64
+hist(age, breaks=8, main='Age Distribution')
+```
+The distribution doesn't seem to immediately resemble any of the theoretical, but it seems like it would fall into a uniform distribution since most values seem to fall around the same frequency.
+
+```{r}
+# Age Cumulative Relative Frequency
+
+break_points = seq(18, 65, by=1)
+data_transform = cut(age, break_points,
+                     right=FALSE)
+
+# convert age data and range into table for plotting later
+freq_table = table(data_transform)
+cumfreq = c(0, cumsum(freq_table))
+
+# plot cumfreq table showing age cum frequency
+plot(break_points, cumfreq,
+     xlab="age",
+     ylab="Cumulative Frequency")
+
+# connect points via line
+lines(break_points, cumfreq)
+```
+This cumulative frequency could confirm our suspicions that this distribution is indeed uniform. There seems to be the same frequency for each age.
+
+```{r}
+# Age qqplot
+qqnorm(age, main='Age Q-Q Plot')
+
+```
+This plot also seems to tell us about uniformity in our data column.
+
+
+BMI
+
+```{r}
+# bmi distribution with min=15.96, max=53.13
+hist(bmi, breaks=15, main='BMI Distribution')
+```
+From the BMI histogram above, we can quickly tell that this distribution resembles a normal one, with perhaps a slight skew to the right. Perhaps with more entries, we can expect this distribution to follow the Central Limit Theorem and converge into a normal distribution.
+
+```{r}
+# BMI Cumulative Relative Frequency
+
+break_points = seq(0, 50, by=1)
+data_transform = cut(bmi, break_points,
+                     right=FALSE)
+
+# convert age data and range into table for plotting later
+freq_table = table(data_transform)
+cumfreq = c(0, cumsum(freq_table))
+
+# plot cumfreq table showing age cum frequency
+plot(break_points, cumfreq,
+     xlab="BMI",
+     ylab="Cumulative Frequency",
+     main='BMI Cum Freq')
+
+# connect points via line
+lines(break_points, cumfreq)
+```
+The cumulative relative frequency above displays that most values fall within 20-40 BMI.
+
+
+```{r}
+# BMI qqplot
+qqnorm(bmi, main='BMI Q-Q Plot')
+
+```
+From the qqplot, we can see that the data seems to behave normally for the most part.
+
+
+
+Cost
+
+```{r}
+# charges distribution with min=, max=
+hist(cost, breaks=15, main='Cost Distribution')
+```
+Just by looking at the 'Cost' Histogram above, we can immediately recognize that this distribution does not resemble a normal one. Instead, this distribution is skewed to the right, meaning that most of our data entries fall on the lower end of the spectrum.
+
+```{r}
+# Charges Cumulative Relative Frequency
+break_points = seq(0, 50000, by=1000)
+data_transform = cut(cost, break_points,
+                     right=FALSE)
+
+# convert age data and range into table for plotting later
+freq_table = table(data_transform)
+cumfreq = c(0, cumsum(freq_table))
+
+# plot cumfreq table showing age cum frequency
+plot(break_points, cumfreq,
+     xlab="cost",
+     ylab="Cumulative Frequency")
+
+# connect points via line
+lines(break_points, cumfreq)
+```
+The cumulative frequency above shows us that most values fall between 5k-20k dollars.
+
+```{r}
+# Charges qqplot
+qqnorm(cost, main='Cost Q-Q Plot')
+
+```
+Because this distribution is clearly not normal, and because its evident there are outliars, we expected to see some disruption or noise to our qqplot. The more outliars we have in our data, the more the line plot will vary and become less smooth as it diverges from the normal distribution.
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+Section 3:
+
+(a) Point Estimates
+```{r}
+library(dplyr)
+# Computing point estimates using a sample of 60 entries
+sample <- sample_n(df, 60)
+# mode function
+find_mode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+# age stats
+avg_age <- mean(sample$age)
+med_age <- median(sample$age)
+mod_age <- find_mode(sample$age)
+var_age <- var(sample$age)
+std_age <- sd(sample$age)
+age_samp_stats <- c(avg_age, med_age, mod_age, var_age, std_age)
+
+# bmi stats
+avg_bmi <- mean(sample$bmi)
+med_bmi <- median(sample$bmi)
+mod_bmi <- find_mode(sample$bmi)
+var_bmi <- var(sample$bmi)
+std_bmi <- sd(sample$bmi)
+bmi_samp_stats <- c(avg_bmi, med_bmi, mod_bmi, var_bmi, std_bmi)
+
+# cost stats
+avg_cost <- mean(sample$cost)
+med_cost <- median(sample$cost)
+mod_cost <- find_mode(sample$cost)
+var_cost <- var(sample$cost)
+std_cost <- sd(sample$cost)
+cost_samp_stats <- c(avg_cost, med_cost, mod_cost, var_cost, std_cost)
+
+# sample stats dataframe
+idx <- c('mean', 'median', 'mode', 'variance', 'standard deviation')
+sample_stats <- data.frame(idx, age_samp_stats, bmi_samp_stats, cost_samp_stats)
+
+
+head(sample_stats)
+```
+
+
+(b) Proportion of data lying within 1.5 IQR
+```{r}
+# age quantile
+age_q <- quantile(age, probs = c(0,0.25,0.5,0.75,1))
+aq1 <- age_q[[2]]
+aq3 <- age_q[[4]]
+a_iqr <- aq3-aq1
+# bounds
+age_lower <- aq1 - 1.5*a_iqr
+age_upper <- aq3 + 1.5*a_iqr
+# age without outliers
+age_no = age[age > age_lower & age < age_upper]
+age_proportion = length(age_no) / length(age)
+print(paste('Proportion of Age within 1.5IQR: ', age_proportion))
+
+
+# bmi quantile
+bmi_q <- quantile(bmi, probs=c(0,0.25,0.5,0.75,1))
+bq1 <- bmi_q[[2]]
+bq3 <- bmi_q[[4]]
+b_iqr <- bq3-bq1
+# bounds
+bmi_lower <- bq1 - 1.5*b_iqr
+bmi_upper <- bq3 + 1.5*b_iqr
+# age without outliers
+bmi_no = bmi[bmi > bmi_lower & bmi < bmi_upper]
+bmi_proportion = length(bmi_no) / length(bmi)
+print(paste('Proportion of BMI within 1.5IQR: ', round(bmi_proportion, digits=3)))
+
+
+# cost quantile
+cost_q <- quantile(cost, probs = c(0,0.25,0.5,0.75,1))
+cq1 <- cost_q[[2]]
+cq3 <- cost_q[[4]]
+c_iqr <- cq3-cq1
+# bounds
+cost_lower <- cq1 - 1.5*c_iqr
+cost_upper <- cq3 + 1.5*c_iqr
+# age without outliers
+cost_no = cost[cost > cost_lower & cost < cost_upper]
+cost_proportion = length(cost_no) / length(cost)
+print(paste('Proportion of Cost within 1.5IQR: ', round(cost_proportion, digits=3)))
+
+```
+
+
+(c) Assuming population variance is the same as sample variance, construct 95%
+confidence interval for the population mean based on the entire data set and on the
+portion determined in b). Are they different? Explain
+```{r}
+# zscore for 95% significant level
+z_star_95 <- qnorm(0.975)
+
+# 95 CI using population mean
+# age
+pop_age_lower = mean(age) - z_star_95 * (sd(age) / sqrt(length(age)))
+pop_age_upper = mean(age) + z_star_95 * (sd(age) / sqrt(length(age)))
+# bmi
+pop_bmi_lower = mean(bmi) - z_star_95 * (sd(bmi) / sqrt(length(bmi)))
+pop_bmi_upper = mean(bmi) + z_star_95 * (sd(bmi) / sqrt(length(bmi)))
+# cost
+pop_cost_lower = mean(cost) - z_star_95 * (sd(cost) / sqrt(length(cost)))
+pop_cost_upper = mean(cost) + z_star_95 * (sd(cost) / sqrt(length(cost)))
+
+
+# 95 CI using proportion from previous part
+# age 
+samp_age_lower = mean(age_no) - z_star_95 * (sd(age_no) / sqrt(length(age_no)))
+samp_age_upper = mean(age_no) + z_star_95 * (sd(age_no) / sqrt(length(age_no)))
+# bmi
+samp_bmi_lower = mean(bmi_no) - z_star_95 * (sd(bmi_no) / sqrt(length(bmi_no)))
+samp_bmi_upper = mean(bmi_no) + z_star_95 * (sd(bmi_no) / sqrt(length(bmi_no)))
+# cost
+samp_cost_lower = mean(cost_no) - z_star_95 * (sd(cost_no) / sqrt(length(cost_no)))
+samp_cost_upper = mean(cost_no) + z_star_95 * (sd(cost_no) / sqrt(length(cost_no)))
+
+
+
+# population dataframe
+index = c('age', 'bmi', 'cost')
+pop_lower = c(pop_age_lower, pop_bmi_lower, pop_cost_lower)
+pop_upper = c(pop_age_upper, pop_bmi_upper, pop_cost_upper)
+ci_pop = data.frame(index, pop_lower, pop_upper)
+
+# sample dataframe
+samp_lower = c(samp_age_lower, samp_bmi_lower, samp_cost_lower)
+samp_upper = c(samp_age_upper, samp_bmi_upper, samp_cost_upper)
+ci_sample = data.frame(index, samp_lower, samp_upper)
+
+
+# are these values different?
+# analysis is provided below results at the bottom
+ci_pop
+ci_sample
+
+```
+
+By comparing both the 95% confidence intervals for the population and sample, we can immediately tell that the intervals for age are similar. That is because our proportion was equal to 1, meaning it is identical to the original with no outliars. Similarly, the intervals for BMI are relatively close, and overlap, since the values are near each other. On the other hand, since there are relatively more outliers in the cost data, we notice a slight change in the intervals by a few thousand dollars.
+
+
+(d) Assuming population variance is unknown, construct 95% confidence interval for
+the population mean. Is it different from CI computed in part c)? Explain.
+```{r}
+# similar to the previous one, instead we will be using the sample variance rather than the population.
+# prefix for previously used sampled statistics: avg_*, std_*
+
+# 95 CI using population mean
+# age
+samp_cia_lower = avg_age - z_star_95 * (std_age / sqrt(length(age)))
+samp_cia_upper = avg_age + z_star_95 * (std_age / sqrt(length(age)))
+# bmi
+samp_cib_lower = avg_bmi - z_star_95 * (std_bmi / sqrt(length(bmi)))
+samp_cib_upper = avg_bmi + z_star_95 * (std_bmi / sqrt(length(bmi)))
+# cost
+samp_cic_lower = avg_cost - z_star_95 * (std_cost / sqrt(length(cost)))
+samp_cic_upper = avg_cost + z_star_95 * (std_cost / sqrt(length(cost)))
+
+
+# sample dataframe
+samp_ci_lower = c(samp_cia_lower, samp_cib_lower, samp_cic_lower)
+samp_ci_upper = c(samp_cia_upper, samp_cib_upper, samp_cic_upper)
+ci_sample = data.frame(index, samp_ci_lower, samp_ci_upper)
+
+ci_sample
+
+```
+
+Comparing this CI dataframe using our sample variance instead of the population, we can see that the intervals for age are slightly higher than that of population variance. We also notice that the intervals for BMI are 
+
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+Section 4:
+
+(a) Estimate the parameters of the chosen theoretical distribution, using the
+appropriate information from your data. 
+```{r}
+# age (discrete)
+# theoretical distribution: uniform (mu)
+uniform_mu <- mean(age)
+
+# bmi (continuous)
+# theoretical distribution: normal (mu, sigma)
+normal_mu <- mean(bmi)
+normal_sigma <- sd(bmi)
+
+# cost (discrete)
+# theoretical distribution: exponential (lambda)
+exponential_lambda <- mean(cost)
+
+```
+
+
+(b) Must your data fit one of the theoretical distributions? Explain why or why not
+```{r}
+# The
+```
+
+
+(c) Could the data fit more than one theoretical distribution? Explain.
+```{r}
+# Per the Central Limit Theorem, as more simulations increase, we can expect most, if not all, of our distributions to converge towards a normal distribution.
+```
+
+
+(d) Display the estimated theoretical distribution(s) and the relative frequency for the
+selected variable on the same plot. Label the axes and mark them appropriately.
+```{r}
+# age 
+```
+
+
+(e) Does it appear that the data fit the distribution well? Justify your answer by
+comparing the probabilities to the relative frequencies, and the histograms to the
+theoretical graphs
+
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+Section 5:
+Trying out for N=10;100;500 and n=2;5;10 respectively, for each choice,
+aid link: https://stats.oarc.ucla.edu/r/modules/probabilities-and-distributions/
+
+(a) Compute the sample average
+```{r}
+# N=10, n=2
+
+
+
+# N=10, n=5
+
+
+
+# N=10, n=10
+
+
+
+# N=100, n=2
+
+
+
+# N=100, n=5
+
+
+
+# N=100, n=10
+
+
+
+# N=500, n=2
+
+
+
+# N=500, n=5
+
+
+
+# N=500, n=10
+
+
+
+
+```
+
+(b) Base this on the mean and standard deviation from your original data, state the
+approximate theoretical distribution of Xbar
+```{r}
+
+```
+
+(c) Construct a histogram displaying your data
+```{r}
+
+```
+
+
+(d) Draw the graph of the theoretical distribution of Xbar and compare the relative
+frequencies to the probabilities. Are the values close?
+```{r}
+
+```
+
+
+(e) Does it appear that the data of averages fit the distribution of Xbar well?
+```{r}
+
+```
+
+
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+Section 6:
+Chosing a pair of variables to explore
+
+(a) Draw a scatter plot between: (1) bmi, and (2) cost
+```{r}
+plot(bmi, cost)
+```
+
+(b) sample correlation coefficient because using entire dataset
+```{r}
+# X = bmi, Y = cost
+# corr = cov(X, Y) / sqrt(var(X)^2*var(Y)^2) where var is sample variance
+correlation = cov(bmi, cost) / (sqrt(var_bmi^2 * var_cost^2))
+print(paste("Sample correlation coefficient: ", round(correlation, 6)))
+```
+We can expect such a value for our correlation coefficient because just from viewing our scatter plot it seems that there is no correlation. That explains why our value is approximately 0.
+
+
+(c) estimate 95% CI for correlation coeffition from previous part
+```{r}
+# fisher transformation
+z_r = log((1+correlation)/(1-correlation))/2
+
+# log upper and lower bounds for 95% CI
+lower_zr = z_r - (z_star_95/sqrt(length(bmi)-3))
+lower_zr = (exp(2*lower_zr)-1)/(exp(2*lower_zr)+1)
+
+upper_zr = z_r + (z_star_95/sqrt(length(bmi)-3))
+upper_zr = (exp(2*upper_zr)-1)/(exp(2*upper_zr)+1)
+
+ci_correlation = data.frame(lower_zr, upper_zr)
+ci_correlation
+```
+This means we are 95% confident that our correlation coefficient will fall between [-0.03,0.03]. In other words, pretty confident there is no correlation between the two variables.
+
+
+(d) perform test of independence using chi square
+
+Null hypothesis H_0: there is no relationship between the BMI and cost data
+
+Alternative hypothesis H_a: there is a relationship between the BMI and cost data
+
+```{r}
+library(stats)
+
+# create matrix of bmi and cost
+bmi_cost_mat = c(bmi, cost)
+
+chisq.test(bmi_cost_mat)
+```
+Because our p-value is so small, approximately 0, especially smaller than our alpha level of 0.05, then we can fail to reject the null hypothesis. But you only reject if the p-value is larger than the alpha?
+
+
+(e) Summarizing discoveries from past parts (a-d)
+
+It is evident from the scatter plot, correlation coefficient and its confidence interval, and test of independence via chi square that there is no relationship between a person's BMI value and their medical insurance cost.
+
+From the scatter plot, the data points are scattered in all directions, with no clear pattern. The correlation coefficient seemed to support that observation. And finally, the confidence interval confirmed by 95% confidence that our correlation should fall within the no relationship range.
+
+From our test of independence using chi-square, we have seen that
+
+------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
+
+
+
+Section 7:
+
+
