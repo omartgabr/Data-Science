@@ -1,2 +1,3 @@
 # Data-Science
-This repo contains projects involved in DS including exploratory data analysis (EDA), visualization tools, data preprocessing and wrangling, and evaluation.
+
+This repository contains data science projects that include techniques such as exploratory data analysis (EDA), data visualization, data preprocessing and wrangling, and hypotheses testing.
